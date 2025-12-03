@@ -76,6 +76,8 @@ class clientSampler(object):
         uniqueId = self.getUniqueId(hostId, clientId)
         self.Clients[uniqueId].speed = speed
 
+    # feedbacks are built from ClientUtility (see training/helper/client_utility.py)
+    # and include reward (statistical utility), gradient utility, and duration.
     def registerScore(self, clientId, reward, gradient,auxi=1.0, time_stamp=0, duration=1., success=True):
         # currently, we only use distance as reward
         if self.mode == "oort":

@@ -2,6 +2,7 @@
 from fl_aggregator_libs import *
 from random import Random
 import scipy.io
+from helper.client_utility import ClientUtility, build_client_utility
 
 initiate_aggregator_setting()
 
@@ -332,7 +333,6 @@ def run(model, queue, param_q, stop_signal, clientSampler):
 
                         # bias term for global speed
                         virtual_c = virtualClientClock[clientId] if clientId in virtualClientClock else 1.
-                        clientUtility = 1.
                         size_of_sample_bin = 1.
 
                         if args.capacity_bin == True:
@@ -341,25 +341,39 @@ def run(model, queue, param_q, stop_signal, clientSampler):
                             else:
                                 size_of_sample_bin = min(clientSampler.getClient(clientId).size, trained_size[i])
 
-                        # register the score
-                        clientUtility = math.sqrt(iteration_loss[i]) * size_of_sample_bin
-                        gradientUtility = math.sqrt(gradient_l2_norm) * size_of_sample_bin/100
+                        client_utility = build_client_utility(
+                            client_id=str(clientId),
+                            loss_value=max(iteration_loss[i], 0.0),
+                            trained_size=size_of_sample_bin,
+                            gradient_l2_norm=gradient_l2_norm,
+                            duration=virtual_c,
+                            data_diversity_score=None,  # TODO: plug in diversity / coverage scores
+                        )
+
                         if args.enable_obs_local_epoch and epoch_count >1:
                             gradient_l2_norm_list.append(gradient_l2_norm)
-                            gradientUtilityList.append(gradientUtility)
+                            gradientUtilityList.append(client_utility.gradient_utility)
                         # add noise to the utility
                         if args.noise_factor > 0:
                             noise = np.random.normal(0, args.noise_factor * median_reward, 1)[0]
-                            clientUtility += noise
-                            clientUtility = max(1e-2, clientUtility)
+                            client_utility.statistical_utility += noise
+                            client_utility.statistical_utility = max(1e-2, client_utility.statistical_utility)
+                            client_utility.combined_utility = client_utility.statistical_utility
 
-                        clientSampler.registerScore(clientId, clientUtility, gradientUtility,auxi=math.sqrt(iteration_loss[i]),time_stamp=epoch_count, duration=virtual_c)
+                        clientSampler.registerScore(
+                            clientId,
+                            client_utility.statistical_utility,
+                            client_utility.gradient_utility,
+                            auxi=math.sqrt(iteration_loss[i]),
+                            time_stamp=epoch_count,
+                            duration=client_utility.duration,
+                        )
 
                         if isSelected:
                             received_updates += 1
 
-                        avgUtilLastEpoch += ratioSample * clientUtility
-                        avgGradientUtilLastEpoch+=ratioSample *gradientUtility
+                        avgUtilLastEpoch += ratioSample * client_utility.statistical_utility
+                        avgGradientUtilLastEpoch+=ratioSample *client_utility.gradient_utility
 
                 logging.info("====Done handling rank {}, with ratio {}, now collected {} clients".format(rank_src, ratioSample, received_updates))
                 if args.enable_obs_local_epoch and epoch_count >1:
@@ -625,5 +639,3 @@ if __name__ == "__main__":
                 )
 
     manager.shutdown()
-
-
