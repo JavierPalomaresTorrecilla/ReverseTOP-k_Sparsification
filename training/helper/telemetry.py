@@ -17,7 +17,8 @@ class TelemetryStats:
     delay_inflation: float = 0.0
     delivery_rate: float = 0.0
     loss_pulse: int = 0
+    rtks_level_index: Optional[int] = None  # RTkS sparsity level chosen (if any)
 
-    """delay_inflation, delivery_rate, and loss_pulse are placeholders for
-    endpoint-network telemetry that the ReverseTOP-k_Sparsification logic will
+    """delay_inflation, delivery_rate, loss_pulse, and rtks_level_index are
+    placeholders for telemetry that the ReverseTOP-k_Sparsification logic will
     populate when RTkS transport hooks are integrated."""

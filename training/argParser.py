@@ -299,6 +299,12 @@ parser.add_argument('--load_epoch', default=1, help='load time stamp for subsequ
 parser.add_argument('--enable_obs_importance', type=bool, default=False, help="enable debug mode")
 parser.add_argument('--enable_obs_client', type=bool, default=False, help="enable debug mode")
 parser.add_argument('--enable_obs_local_epoch', type=bool, default=False, help="enable debug mode")
+parser.add_argument(
+    "--enable_rtks",
+    action="store_true",
+    default=False,
+    help="Enable RTkSController-driven sparsity level selection (currently logging-only; does not change training behavior).",
+)
 parser.add_argument('--dropout_low', default=0.1, help='dropout ratio for model parameterization',type=float)
 parser.add_argument('--dropout_high', default=0.6, help='dropout ratio for model parameterization',type=float)
 parser.add_argument('--adaptive_epoch_beta', default=1, help='dropout ratio for model parameterization',type=float)

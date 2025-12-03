@@ -5,6 +5,7 @@ import scipy.io
 from collections import defaultdict
 from helper.client_utility import ClientUtility, build_client_utility
 from helper.telemetry import TelemetryStats
+from helper.rtks_controller import RTkSController
 
 initiate_aggregator_setting()
 
@@ -262,6 +263,12 @@ def run(model, queue, param_q, stop_signal, clientSampler):
     if args.gradient_policy == 'yogi':
         gradient_controller = YoGi(eta=args.yogi_eta, tau=args.yogi_tau, beta=args.yogi_beta, beta2=args.yogi_beta2)
 
+    rtks_controller = None
+    if getattr(args, 'enable_rtks', False):
+        # Default ladder: densest to sparsest; we only log levels for now.
+        default_p_levels = [1.0, 0.5, 0.25, 0.1, 0.05]
+        rtks_controller = RTkSController(p_levels=default_p_levels)
+
     clientInfoFile = os.path.join(logDir, 'clientInfoFile')
     # dump the client info
     with open(clientInfoFile, 'wb') as fout:
@@ -391,6 +398,12 @@ def run(model, queue, param_q, stop_signal, clientSampler):
                             num_samples=num_samples,
                         )
                         client_telemetry_history[int(clientId)].append(telemetry)
+
+                        if rtks_controller is not None:
+                            # Logging-only: choose a sparsity level index but do not
+                            # use it to change dropout or gradient computation yet.
+                            level_index = rtks_controller.choose_level(int(clientId), telemetry)
+                            telemetry.rtks_level_index = level_index
 
                         if args.enable_obs_local_epoch and epoch_count >1:
                             gradient_l2_norm_list.append(gradient_l2_norm)
