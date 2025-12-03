@@ -2,7 +2,9 @@
 from fl_aggregator_libs import *
 from random import Random
 import scipy.io
+from collections import defaultdict
 from helper.client_utility import ClientUtility, build_client_utility
+from helper.telemetry import TelemetryStats
 
 initiate_aggregator_setting()
 
@@ -222,6 +224,20 @@ def run(model, queue, param_q, stop_signal, clientSampler):
     pendingWorkers = {}
     test_results = {}
     virtualClientClock = {}
+    # Per-client telemetry history: client_id -> list of TelemetryStats
+    client_telemetry_history = defaultdict(list)
+
+    def get_recent_telemetry(client_id: int, window: int = 10):
+        """Return up to `window` most recent TelemetryStats entries for this client.
+
+        This is a local helper used by the parameter server to estimate per-client
+        cost and behavior in future extensions (e.g., envelope-based control).
+        """
+
+        history = client_telemetry_history.get(client_id, [])
+        if window <= 0 or len(history) <= window:
+            return list(history)
+        return history[-window:]
     exploredPendingWorkers = []
     avgUtilLastEpoch = 0.
     avgGradientUtilLastEpoch = 0.
@@ -341,6 +357,20 @@ def run(model, queue, param_q, stop_signal, clientSampler):
                             else:
                                 size_of_sample_bin = min(clientSampler.getClient(clientId).size, trained_size[i])
 
+                        bytes_uploaded = 0
+                        for arr in delta_ws:
+                            if hasattr(arr, "nbytes"):
+                                bytes_uploaded += int(arr.nbytes)
+
+                        try:
+                            speed_str = speed[i]
+                            sec_per_sample_str, num_samples_str = speed_str.split("_")
+                            speed_per_sample = float(sec_per_sample_str)
+                            num_samples = int(float(num_samples_str))
+                        except Exception:
+                            speed_per_sample = 0.0
+                            num_samples = int(trained_size[i])
+
                         client_utility = build_client_utility(
                             client_id=str(clientId),
                             loss_value=max(iteration_loss[i], 0.0),
@@ -349,6 +379,18 @@ def run(model, queue, param_q, stop_signal, clientSampler):
                             duration=virtual_c,
                             data_diversity_score=None,  # TODO: plug in diversity / coverage scores
                         )
+
+                        telemetry = TelemetryStats(
+                            round_index=epoch_count,
+                            client_id=int(clientId),
+                            duration=float(virtual_c),
+                            local_compute_time=float(virtual_c),
+                            upload_time=0.0,
+                            bytes_uploaded=bytes_uploaded,
+                            speed_per_sample=speed_per_sample,
+                            num_samples=num_samples,
+                        )
+                        client_telemetry_history[int(clientId)].append(telemetry)
 
                         if args.enable_obs_local_epoch and epoch_count >1:
                             gradient_l2_norm_list.append(gradient_l2_norm)
