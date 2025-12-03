@@ -1,8 +1,14 @@
-# PyramidFL
+# ReverseTOP-k_Sparsification
 
-This repository contains scripts and instructions for reproducing the experiments in our MobiCom'22 paper "
-PyramidFL: Fine-grained Data and System Heterogeneity-aware Client Selection for Efficient Federated Learning". 
-<!-- [PyramidFL: Fine-grained Data and System Heterogeneity-aware Client Selection for Efficient Federated Learning](https://www.usenix.org/conference/osdi21/presentation/lai)".  -->
+This repository implements and extends the PyramidFL framework for fine-grained client selection in federated learning. It is now being developed under the name ReverseTOP-k_Sparsification, a bi-level, bandwidth-responsive controller that couples client selection with gradient sparsification. The goal is to jointly exploit client heterogeneity and volatile network bandwidth using Reverse Top-k sparsification and envelope-based control, while keeping compatibility with the original PyramidFL codebase and experiments.
+
+## Relationship to PyramidFL
+
+This codebase started from the public implementation of PyramidFL (MobiCom’22) and preserves the original training loops, client sampler, and Oort-based selector. On top of that baseline, ReverseTOP-k_Sparsification adds new abstractions and modules for:
+
+* Encapsulated client utility computation (`ClientUtility`)
+* Telemetry-aware, bandwidth-responsive gradient sparsification (Reverse Top-k)
+* A bi-level design that links per-client transmission decisions to server-side selection and timing envelopes
 
 # Overview
 
@@ -21,12 +27,13 @@ Please run ```install.sh``` to install the following automatically:
 
 Note: if you prefer different versions of conda and CUDA, please check  comments in `install.sh` for details.
 
-Run the following commands to install PyramidFL. 
+Run the following commands to install ReverseTOP-k_Sparsification. 
 
 ```
+git clone https://github.com/JavierPalomaresTorrecilla/ReverseTOP-k_Sparsification.git
 source install.sh 
-git clone https://github.com/liecn/PyramidFL.git
-cd PyramidFL
+cd ReverseTOP-k_Sparsification
+
 ```
 # Repo Structure
 
@@ -118,31 +125,12 @@ Dataset Root
 For example, submit the configuration file `evals/configs/speech/conf_random.yml` to the main file `manager.py`.
 
 ``` bash
-cd {root}/PyramidFL/training/evals
+cd {root}/ReverseTOP-k_Sparsification/training/evals
 python manager.py submit configs/speech/conf_random.yml
 ```
 
 3. All logs will be dumped to `log_path` specified in the configuration file. `training_perf` locates at the master node under this path. Meanwhile, the user can check `/evals/{task}_logging_{date}` to see whether the job is moving on.
 
-# Notes
-please cite our paper if you think the source codes are useful in your research project.
-```bibtex
-@inproceedings{PyramidFL_MobiCom22,
-    author = {Li, Chenning and Zeng, Xiao and Zhang, Mi and Cao, Zhichao},
-    title = {PyramidFL: Fine-grained Data and System Heterogeneity-aware Client Selection for Efficient Federated Learning},
-    year = {2022},
-    booktitle = {Proceedings of ACM MobiCom},
-}
-```
 
-# Acknowledgements
-
-Thanks to Fan Lai, Xiangfeng Zhu, Harsha V. Madhyastha, and Mosharaf Chowdhury for their OSDI'21 paper [Oort: Efficient Federated Learning via Guided Participant Selection](https://www.usenix.org/conference/osdi21/presentation/lai). The source codes can be found in repo [Oort](https://github.com/SymbioticLab/Oort).
-
-We also appreciate the help from Xiaomin Ouyang, Zhiyuan Xie, Jiayu Zhou, Jianwei Huang, and Guoliang Xing for their MobiSys'21 paper [ClusterFL: a similarity-aware federated learning system for human activity recognition](https://dl.acm.org/doi/10.1145/3458864.3467681). The HARBox dataset can be found in repo [FL-Datasets-for-HAR](https://github.com/xmouyang/FL-Datasets-for-HAR).
-
-
-# Contact
-Chenning Li by lichenni@msu.edu
 
 
